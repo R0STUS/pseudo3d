@@ -23,6 +23,40 @@ end
 
 local deg2rad = math.pi / 100
 
+function redrawGrad()
+    love.graphics.setCanvas(gradient)
+    local halfy = math.floor(Resl[2] * 0.5)
+    for i = 1, Resl[2] do
+        local clr = (i - halfy) / halfy
+        if clr < 0 then clr = -clr end
+        love.graphics.setColor(clr * 0.4, clr * 0.4, 0)
+        love.graphics.line(1, i, Resl[1], i)
+    end
+    love.graphics.setCanvas()
+end
+
+function redrawMinimap()
+    love.graphics.setCanvas(minimap)
+    for i = 1, mapSize do
+        for j = 1, mapSize do
+            if Map[i][j] == 1 then
+                love.graphics.setColor(0.5,0.5,0,0.75)
+            else
+                love.graphics.setColor(0,0,0,0.25)
+            end
+            love.graphics.rectangle("fill", ((i - 1) * (2048 / mapSize)), ((j - 1) * (2048 / mapSize)), 2048 / mapSize, 2048 / mapSize)
+        end
+    end
+    love.graphics.setColor(0.75, 0, 0)
+    local plposx = ((posx - 1) * (2048 / mapSize))
+    local plposy = ((posy - 1) * (2048 / mapSize))
+    local offsetx = math.sin(dir * deg2rad) * 128
+    local offsety = math.cos(dir * deg2rad) * 128
+    love.graphics.line(plposx, plposy, plposx + offsetx, plposy + offsety)
+    love.graphics.circle("fill", plposx, plposy, 32)
+    love.graphics.setCanvas()
+end
+
 function love.load()
     Resl = {love.graphics.getWidth(), love.graphics.getHeight()}
     if Resl[1] < Resl[2] then
@@ -85,16 +119,14 @@ function love.load()
         ["Dir"] = {"INFO", "Camera direction: " .. dir},
         ["FPS"] = {"INFO", 0}
     }
+    gradient = love.graphics.newCanvas(Resl[1], Resl[2])
+    redrawGrad()
+    minimap = love.graphics.newCanvas(2048, 2048)
+    redrawMinimap()
 end
 
 function love.draw()
-    local halfy = math.floor(Resl[2] * 0.5)
-    for i = 1, Resl[2] do
-        local clr = (i - halfy) / halfy
-        if clr < 0 then clr = -clr end
-        love.graphics.setColor(clr * 0.4, clr * 0.4, 0)
-        love.graphics.line(1, i, Resl[1], i)
-    end
+    love.graphics.draw(gradient)
     local multResl = 1 / (accur / mapSize)
     for i = 1, Resl[1] do
         local tx = posx
@@ -122,11 +154,14 @@ function love.draw()
         love.graphics.setColor(clr * 0.5, clr * 0.5, 0)
         love.graphics.line(i, y1, i, y2)
     end
+    redrawMinimap()
+    local minimapScale = (Resl[1] / 8) / 2048
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.draw(minimap, Resl[1] - (2048 * minimapScale), 1, 0, minimapScale, minimapScale)
+    love.graphics.setColor(1, 1, 1)
     local i = 0
-    for k, d in pairs(debugInfo) do
-        local col = Colors[d[1]]
-        love.graphics.setColor(col[1], col[2], col[3])
-        love.graphics.print(d[2], 1, (i * 16) + 1)
+    for _, v in pairs(debugInfo) do
+        love.graphics.print(v[2], 1, (i * 12) + 1)
         i = i + 1
     end
 end
@@ -156,8 +191,8 @@ function love.resize(x, y)
     else
         sqs = y
     end
-    posx = (Resl[1] * 0.5) - (sqs * 0.5)
-    posy = (Resl[2] * 0.5) - (sqs * 0.5)
+    gradient = love.graphics.newCanvas(x, y)
+    redrawGrad()
 end
 
 function love.keypressed(key, scancode, isrepeat)
